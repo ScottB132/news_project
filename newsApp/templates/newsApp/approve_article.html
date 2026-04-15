@@ -1,0 +1,47 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Editor Queue - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Editor Queue: Pending Approval</h1>
+
+    {% for article in articles %}
+        <div class="news-card">
+            <span class="pending-badge">Awaiting Review</span>
+
+            <h2>{{ article.title }}</h2>
+
+            <p>
+                <strong>Author:</strong> {{ article.author.username }}
+                &nbsp;|&nbsp;
+                <strong>Date:</strong> {{ article.created_at|date:"M d, Y" }}
+            </p>
+
+            <p>{{ article.content|truncatewords:40 }}</p>
+
+            <div class="card-actions">
+
+                <form method="POST" action="{% url 'approve_article' article.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success">Approve & Publish</button>
+                </form>
+
+                <a href="{% url 'preview_article' article.id %}" class="btn btn-primary">Preview Article</a>
+
+                <form method="POST" action="{% url 'reject_article' article.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Reject</button>
+                </form>
+
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>The queue is empty. All articles are live.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

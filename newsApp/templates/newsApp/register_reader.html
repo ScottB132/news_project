@@ -1,0 +1,29 @@
+{% extends "newsApp/base.html" %}
+{% load static %}
+
+{% block title %}Register - {{ role }}{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Register as {{ role }}</h2>
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        {% for field in form %}
+            <div class="form-group">
+                {{ field.label_tag }}
+                {{ field }}
+                {{ field.errors }}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">Register</button>
+    </form>
+
+    <img src="{% static 'newsApp/images/read_all_about_it.jpg' %}" 
+         alt="News Image" 
+         class="home-image"> 
+</div>
+{% endblock %}

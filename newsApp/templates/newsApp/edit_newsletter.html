@@ -1,0 +1,23 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Edit Newsletter - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="form-container form-container--wide">
+    <h2>Edit Newsletter</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="card-actions">
+            <button type="submit" class="btn btn-primary">Update Newsletter</button>
+            <a href="{% url 'manage_newsletters' %}"
+               class="btn btn-secondary"
+               onclick="return confirm('Discard changes and go back?')">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

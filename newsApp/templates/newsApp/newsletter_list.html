@@ -1,0 +1,54 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Newsletters - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Newsletters</h1>
+
+    {% if user.role == 'journalist' or user.role == 'editor' %}
+        <div class="queue-heading" style="margin-bottom: 30px;">
+            {% if user.role == 'journalist' %}
+                <a href="{% url 'manage_newsletters' %}" class="btn btn-success">+ Create Newsletter</a>
+            {% elif user.role == 'editor' %}
+                <a href="{% url 'editor_create_newsletter' %}" class="btn btn-success">+ Create Newsletter</a>
+            {% endif %}
+        </div>
+    {% endif %}
+
+    {% for newsletter in newsletters %}
+        <div class="news-card">
+            <h2>{{ newsletter.title }}</h2>
+            <p>{{ newsletter.description|truncatewords:30 }}</p>
+
+            <div class="story-meta">
+                By <strong>{{ newsletter.author.username }}</strong>
+                &nbsp;|&nbsp;
+                {{ newsletter.created_at|date:"M d, Y" }}
+            </div>
+
+            <div class="card-actions">
+                <a href="{% url 'newsletter_detail' newsletter.pk %}" class="btn btn-primary">Read</a>
+
+                {% if user.role == 'editor' %}
+                    <a href="{% url 'editor_edit_newsletter' newsletter.pk %}" class="btn btn-secondary">Edit</a>
+
+                    <form method="POST" action="{% url 'editor_delete_newsletter' newsletter.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Are you sure you want to delete this newsletter?')">
+                            Delete
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>No newsletters available yet.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Confirm Delete - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Are you sure?</h2>
+    <p>You are about to permanently delete <strong>{{ item }}</strong>. This cannot be undone.</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="card-actions">
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+            <a href="{% url 'journalist_dashboard' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

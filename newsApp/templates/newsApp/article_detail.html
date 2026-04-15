@@ -1,0 +1,33 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}{{ article.title }} - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-card article-detail">
+
+    <div class="story-meta">
+        By <strong>{{ article.author.username }}</strong>
+        &nbsp;|&nbsp;
+        {{ article.created_at|date:"F d, Y" }}
+    </div>
+
+    <h1 class="article-title">{{ article.title }}</h1>
+
+    <hr>
+
+    <div class="article-body">
+        {{ article.content|linebreaks }}
+    </div>
+
+    <div class="article-footer">
+        {% if user.role == 'editor' %}
+            <a href="{% url 'pending_articles' %}" class="btn btn-primary">Back to Queue</a>
+        {% elif user.role == 'journalist' %}
+            <a href="{% url 'journalist_dashboard' %}" class="btn btn-primary">Back to My Articles</a>
+        {% else %}
+            <a href="{% url 'news_list' %}" class="btn btn-primary">Back to News</a>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

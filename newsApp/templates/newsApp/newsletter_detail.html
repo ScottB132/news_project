@@ -1,0 +1,40 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}{{ newsletter.title }} - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-card article-detail">
+
+    <h1 class="article-title">{{ newsletter.title }}</h1>
+
+    <div class="story-meta">
+        By <strong>{{ newsletter.author.username }}</strong>
+        &nbsp;|&nbsp;
+        {{ newsletter.created_at|date:"F d, Y" }}
+    </div>
+
+    <hr>
+
+    <div class="article-body">
+        {{ newsletter.description|linebreaks }}
+    </div>
+
+    {% if newsletter.articles.all %}
+        <h3>Articles in this Newsletter</h3>
+        {% for article in newsletter.articles.all %}
+            <div class="story-item">
+                <h4>{{ article.title }}</h4>
+                <p>{{ article.content|truncatewords:30 }}</p>
+                <div class="card-actions">
+                    <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Read Article</a>
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="article-footer">
+        <a href="{% url 'newsletter_list' %}" class="btn btn-primary">Back to Newsletters</a>
+    </div>
+
+</div>
+{% endblock %}

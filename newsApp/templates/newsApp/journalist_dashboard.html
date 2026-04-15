@@ -1,0 +1,49 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}My Articles - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">My Submissions</h1>
+
+    <div class="queue-heading" style="margin-bottom: 30px;">
+        <a href="{% url 'create_article' %}" class="btn btn-success">+ Write New Article</a>
+    </div>
+
+    {% for article in articles %}
+    <div class="news-card">
+
+        {% if article.approved %}
+            <span class="status-badge status-live">● Live</span>
+        {% else %}
+            <span class="status-badge status-pending">● Awaiting Approval</span>
+        {% endif %}
+
+        <h2>{{ article.title }}</h2>
+        <p>{{ article.content|truncatewords:30 }}</p>
+
+        <div class="story-meta">
+            Submitted on {{ article.created_at|date:"M d, Y" }}
+        </div>
+
+        <div class="card-actions">
+            <a href="{% url 'preview_article' article.id %}" class="btn btn-primary">View</a>
+            <a href="{% url 'edit_article' article.id %}" class="btn btn-secondary">Edit</a>
+
+            <form method="POST" action="{% url 'delete_article' article.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger"
+                        onclick="return confirm('Are you sure you want to delete this article?')">
+                    Delete
+                </button>
+            </form>
+        </div>
+
+    </div>
+
+{% empty %}
+    <div class="news-card empty-queue">
+        <p>You haven't written any articles yet.</p>
+    </div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Newsletter Manager - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Newsletter Manager</h1>
+
+    {% comment %} Create new newsletter {% endcomment %}
+    <div class="news-card">
+        <h3>+ Create New Newsletter</h3>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Save Newsletter</button>
+        </form>
+    </div>
+
+    {% comment %} Existing newsletters {% endcomment %}
+    {% for nl in newsletters %}
+        <div class="news-card">
+            <h2>{{ nl.title }}</h2>
+            <p>{{ nl.description|truncatewords:20 }}</p>
+            <p><strong>Articles included:</strong> {{ nl.articles.count }}</p>
+
+            <div class="card-actions">
+                <a href="{% url 'update_newsletter' nl.pk %}" class="btn btn-primary">Edit</a>
+
+                <form method="POST" action="{% url 'delete_newsletter' nl.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>You haven't created any newsletters yet. Use the form above to get started.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

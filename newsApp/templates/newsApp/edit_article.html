@@ -1,0 +1,23 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Edit Article - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="create-article-container">
+    <h2>Edit Article</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <div class="card-actions">
+            <button type="submit" class="btn btn-success">Submit for Review</button>
+            <a href="{% url 'journalist_dashboard' %}"
+               class="btn btn-secondary"
+               onclick="return confirm('Discard changes and go back?')">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

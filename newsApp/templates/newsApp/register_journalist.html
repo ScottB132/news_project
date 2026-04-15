@@ -1,0 +1,25 @@
+{% extends "newsApp/base.html" %}
+{% load static %}
+
+{% block title %}Register as {{ role }}{% endblock %}
+
+{% block content %}
+<main class="form-container">
+    <h2>Register as {{ role }}</h2>
+
+    <form method="POST" autocomplete="off">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {{ form.as_p }}
+        <button type="submit" class="btn btn-primary" style="width: 100%;">
+            Create {{ role }} Account
+        </button>
+    </form>
+
+    <img src="{% static 'newsApp/images/read_all_about_it.jpg' %}"
+         alt="News Image"
+         class="home-image"
+         style="margin-top: 20px;">
+</main>
+{% endblock %}
+

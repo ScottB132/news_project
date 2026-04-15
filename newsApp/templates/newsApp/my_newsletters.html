@@ -1,0 +1,56 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Latest News - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Latest Headlines</h1>
+
+    {% for article in articles %}
+        <div class="news-card">
+
+            {% if not article.approved %}
+                <span class="pending-badge">Awaiting Approval</span>
+            {% endif %}
+
+            <h2>{{ article.title }}</h2>
+
+            <div class="story-meta">
+                By <strong>{{ article.author.username }}</strong>
+                &nbsp;|&nbsp;
+                {{ article.created_at|date:"M d, Y" }}
+            </div>
+
+            <p>{{ article.content|truncatewords:40 }}</p>
+
+            <div class="card-actions">
+
+                {% if article.approved %}
+                    <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Read More</a>
+                {% else %}
+                    <a href="{% url 'preview_article' article.id %}" class="btn btn-primary">Preview</a>
+                {% endif %}
+
+                {% if user.role == 'editor' and not article.approved %}
+                    <form method="POST" action="{% url 'approve_article' article.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">Approve</button>
+                    </form>
+
+                    <form method="POST" action="{% url 'reject_article' article.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </form>
+                {% endif %}
+
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>No articles available at the moment. Check back soon!</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

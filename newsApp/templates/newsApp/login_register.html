@@ -1,0 +1,43 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Login / Register - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="form-container">
+
+    <h2>Login</h2>
+
+    {% comment %} Display login errors from messages framework {% endcomment %}
+    {% if messages %}
+        {% for message in messages %}
+            <p class="error-message">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+
+    <form method="POST" action="{% url 'login_user' %}">
+        {% csrf_token %}
+
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+
+        <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+
+    <hr>
+
+    <h2>Register</h2>
+    <div class="register-buttons">
+        <a href="{% url 'register_reader' %}" class="btn btn-secondary">Register as Reader</a>
+        <a href="{% url 'register_journalist' %}" class="btn btn-secondary">Register as Journalist</a>
+
+        {% comment %} Only visible to existing editors {% endcomment %}
+        {% if user.is_authenticated and user.role == 'editor' %}
+            <a href="{% url 'register_editor' %}" class="btn btn-secondary">Register as Editor</a>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
