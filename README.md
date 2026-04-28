@@ -1,4 +1,30 @@
+# Speedy Spectator News Application
 
+A Django-based news platform supporting readers, journalists, and editors.
+
+---
+
+## Running with venv
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/ScottB132/news_project.git
+cd news_project
+```
+
+### 2. Create and activate a virtual environment
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### 3. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Set up environment variables
+Create a `.env` file in the project root with the following:
 
 The Speedy Spectator — News Application
 
