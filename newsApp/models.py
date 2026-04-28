@@ -323,3 +323,4 @@ class Newsletter(models.Model):
         """Return the newsletter title as its string representation."""
         return self.title
 
+# Docstrings verified
