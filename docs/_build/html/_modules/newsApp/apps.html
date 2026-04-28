@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>newsApp.apps &#8212; Speedy Spectator 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for newsApp.apps</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">newsApp/apps.py</span>
+
+<span class="sd">Application configuration for the Speedy Spectator news application.</span>
+
+<span class="sd">This module defines the AppConfig class which Django uses to configure</span>
+<span class="sd">the newsApp application. The ready() method is used to import signal</span>
+<span class="sd">handlers when the application starts, ensuring they are registered</span>
+<span class="sd">and active for the lifetime of the application.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.apps</span><span class="w"> </span><span class="kn">import</span> <span class="n">AppConfig</span>
+
+
+<div class="viewcode-block" id="NewsAppConfig">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.apps.NewsAppConfig">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NewsAppConfig</span><span class="p">(</span><span class="n">AppConfig</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Application configuration class for the newsApp Django application.</span>
+
+<span class="sd">    Inherits from Django&#39;s AppConfig to provide application-level</span>
+<span class="sd">    configuration settings. The ready() method is overridden to import</span>
+<span class="sd">    signal handlers after the application registry is fully populated,</span>
+<span class="sd">    which is the recommended way to connect signals in Django.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        default_auto_field (str): Sets the default primary key field type</span>
+<span class="sd">                                  to BigAutoField (64-bit integer) for all</span>
+<span class="sd">                                  models in this application.</span>
+<span class="sd">        name (str): The full Python path to the application module.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Use 64-bit integer primary keys for all models in this application</span>
+    <span class="n">default_auto_field</span> <span class="o">=</span> <span class="s1">&#39;django.db.models.BigAutoField&#39;</span>
+
+    <span class="c1"># The dotted Python path to the application module</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;newsApp&#39;</span>
+
+<div class="viewcode-block" id="NewsAppConfig.ready">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.apps.NewsAppConfig.ready">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ready</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform application startup tasks after the app registry is ready.</span>
+
+<span class="sd">        Called by Django once the application registry is fully populated.</span>
+<span class="sd">        Imports the signals module to register all signal handlers defined</span>
+<span class="sd">        in newsApp/signals.py.</span>
+
+<span class="sd">        This import must happen here rather than at the module level to</span>
+<span class="sd">        avoid AppRegistryNotReady errors that occur when signals are</span>
+<span class="sd">        imported before Django&#39;s app registry has finished loading.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Import signals here to register all post_save and post_migrate</span>
+        <span class="c1"># handlers defined in signals.py. This ensures signals are active</span>
+        <span class="c1"># for the full lifetime of the application.</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">newsApp.signals</span>  <span class="c1"># noqa: F401</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Speedy Spectator</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Scott Bedford.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>newsApp.forms &#8212; Speedy Spectator 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for newsApp.forms</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">newsApp/forms.py</span>
+
+<span class="sd">Django forms for the Speedy Spectator news application.</span>
+
+<span class="sd">Forms defined here:</span>
+<span class="sd">    - ArticleForm:                 Used by journalists to create and edit articles.</span>
+<span class="sd">                                   Excludes author and approved fields which are</span>
+<span class="sd">                                   set server-side in the view.</span>
+
+<span class="sd">    - NewsletterForm:              Used by journalists and editors to create and</span>
+<span class="sd">                                   edit newsletters. Accepts an optional user</span>
+<span class="sd">                                   argument to filter the articles dropdown to</span>
+<span class="sd">                                   only show the journalist&#39;s own approved articles.</span>
+
+<span class="sd">    - JournalistRegistrationForm:  Used for all role registrations (reader,</span>
+<span class="sd">                                   journalist, editor). Extends Django&#39;s built-in</span>
+<span class="sd">                                   UserCreationForm to include email and use the</span>
+<span class="sd">                                   custom User model.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">django</span><span class="w"> </span><span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.forms</span><span class="w"> </span><span class="kn">import</span> <span class="n">UserCreationForm</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">Article</span><span class="p">,</span> <span class="n">Newsletter</span><span class="p">,</span> <span class="n">User</span><span class="p">,</span> <span class="n">Publisher</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Article Form</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="ArticleForm">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.ArticleForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">ArticleForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Form for creating and editing news articles.</span>
+
+<span class="sd">    Exposes only the title, content, and publisher fields to the user.</span>
+<span class="sd">    The author field is intentionally excluded and set automatically in</span>
+<span class="sd">    the view from request.user. The approved field is also excluded and</span>
+<span class="sd">    always defaults to False until an editor approves the article.</span>
+
+<span class="sd">    The publisher field is optional — an article can be written by a</span>
+<span class="sd">    journalist independently without being associated with a publisher.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="ArticleForm.Meta">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.ArticleForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Article</span>
+
+        <span class="c1"># author is set in the view from request.user — not user-editable</span>
+        <span class="c1"># approved defaults to False and is set by editors only</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;content&#39;</span><span class="p">,</span> <span class="s1">&#39;publisher&#39;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="ArticleForm.clean">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.ArticleForm.clean">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform cross-field validation on the article form.</span>
+
+<span class="sd">        Calls the parent clean() method to run Django&#39;s built-in</span>
+<span class="sd">        field validation. Additional cross-field validation can be</span>
+<span class="sd">        added here if required in future.</span>
+
+<span class="sd">        Note: Model-level validation (author or publisher required) is</span>
+<span class="sd">        enforced via Article.clean() which is called by full_clean()</span>
+<span class="sd">        in the view before saving.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: The cleaned and validated form data.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cleaned_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">cleaned_data</span></div>
+</div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Newsletter Form</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="NewsletterForm">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.NewsletterForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">NewsletterForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Form for creating and editing newsletters.</span>
+
+<span class="sd">    Exposes title, description, and articles fields. Accepts an optional</span>
+<span class="sd">    user keyword argument to filter the articles dropdown — when a user</span>
+<span class="sd">    is provided, only their own approved articles are shown as options.</span>
+
+<span class="sd">    This prevents journalists from adding other journalists&#39; articles</span>
+<span class="sd">    to their newsletters and ensures only approved content is included.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="NewsletterForm.Meta">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.NewsletterForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Newsletter</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;title&#39;</span><span class="p">,</span> <span class="s1">&#39;description&#39;</span><span class="p">,</span> <span class="s1">&#39;articles&#39;</span><span class="p">]</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initialise the newsletter form with an optional user filter.</span>
+
+<span class="sd">        Pops the user argument from kwargs before calling the parent</span>
+<span class="sd">        constructor to avoid passing an unexpected keyword argument</span>
+<span class="sd">        to Django&#39;s ModelForm.</span>
+
+<span class="sd">        If a user is provided, filters the articles queryset to only</span>
+<span class="sd">        show articles authored by that user that have been approved.</span>
+<span class="sd">        This scopes the articles dropdown to the journalist&#39;s own content.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Positional arguments passed to the parent constructor.</span>
+<span class="sd">            **kwargs: Keyword arguments. Accepts an optional &#39;user&#39; key</span>
+<span class="sd">                      containing the currently authenticated user.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Extract the user argument before passing kwargs to the parent</span>
+        <span class="c1"># to avoid a TypeError from unexpected keyword arguments</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">kwargs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s1">&#39;user&#39;</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="c1"># Call the parent constructor to initialise the form fields</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">user</span><span class="p">:</span>
+            <span class="c1"># Restrict the articles dropdown to the journalist&#39;s own</span>
+            <span class="c1"># approved articles only — prevents cross-user content mixing</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fields</span><span class="p">[</span><span class="s1">&#39;articles&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">queryset</span> <span class="o">=</span> <span class="n">Article</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span>
+                <span class="n">author</span><span class="o">=</span><span class="n">user</span><span class="p">,</span>
+                <span class="n">approved</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Registration Form</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="JournalistRegistrationForm">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.JournalistRegistrationForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">JournalistRegistrationForm</span><span class="p">(</span><span class="n">UserCreationForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Registration form used for all user roles.</span>
+
+<span class="sd">    Extends Django&#39;s built-in UserCreationForm to use the custom User</span>
+<span class="sd">    model and include the email field alongside username. Despite the</span>
+<span class="sd">    name, this form is used for reader, journalist, and editor registration</span>
+<span class="sd">    — the role is assigned in the view, not in the form.</span>
+
+<span class="sd">    The form inherits password and password confirmation fields from</span>
+<span class="sd">    UserCreationForm, along with all of Django&#39;s built-in password</span>
+<span class="sd">    strength validation.</span>
+
+<span class="sd">    Fields:</span>
+<span class="sd">        username (str): The user&#39;s chosen login name.</span>
+<span class="sd">        email (str): The user&#39;s email address.</span>
+<span class="sd">        password1 (str): The user&#39;s chosen password.</span>
+<span class="sd">        password2 (str): Password confirmation — must match password1.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="JournalistRegistrationForm.Meta">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.JournalistRegistrationForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">(</span><span class="n">UserCreationForm</span><span class="o">.</span><span class="n">Meta</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">User</span>
+
+        <span class="c1"># Include email alongside the default username field</span>
+        <span class="c1"># Role is assigned in the view from the registration URL</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;username&#39;</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">)</span></div>
+</div>
+
+
+
+<span class="c1"># -------------------------</span>
+<span class="c1"># Publisher Form</span>
+<span class="c1"># -------------------------</span>
+<div class="viewcode-block" id="PublisherForm">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.PublisherForm">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PublisherForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Form for creating and editing publishers.</span>
+<span class="sd">    Used by editors to create new publishing houses.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="PublisherForm.Meta">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.PublisherForm.Meta">[docs]</a>
+    <span class="k">class</span><span class="w"> </span><span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Publisher</span>
+        <span class="n">fields</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;name&#39;</span><span class="p">,</span> <span class="s1">&#39;website&#39;</span><span class="p">]</span></div>
+</div>
+
+<span class="c1"># Docstrings verified</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Speedy Spectator</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Scott Bedford.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

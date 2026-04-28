@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+
+<html lang="en" data-content_root="../../">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>newsApp.models &#8212; Speedy Spectator 1.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=5ecbeea2" />
+    <link rel="stylesheet" type="text/css" href="../../_static/basic.css?v=b08954a9" />
+    <link rel="stylesheet" type="text/css" href="../../_static/alabaster.css?v=27fed22d" />
+    <script src="../../_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+    <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+
+  
+  
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for newsApp.models</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">newsApp/models.py</span>
+
+<span class="sd">Database models for the Speedy Spectator news application.</span>
+
+<span class="sd">Models defined here:</span>
+<span class="sd">    - User:        Custom user model extending Django&#39;s AbstractUser.</span>
+<span class="sd">                   Supports three roles: reader, journalist, and editor.</span>
+<span class="sd">                   Readers have publisher and journalist subscriptions.</span>
+<span class="sd">                   Journalists have articles and newsletters via reverse relations.</span>
+
+<span class="sd">    - Publisher:   Represents a news organisation. Can have many journalists</span>
+<span class="sd">                   and editors associated with it.</span>
+
+<span class="sd">    - Article:     A news article written by a journalist or on behalf of</span>
+<span class="sd">                   a publisher. Must be approved by an editor before publishing.</span>
+
+<span class="sd">    - Newsletter:  A curated collection of articles created by a journalist</span>
+<span class="sd">                   or editor. Can be viewed by all users.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.contrib.auth.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">AbstractUser</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.core.exceptions</span><span class="w"> </span><span class="kn">import</span> <span class="n">ValidationError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.db</span><span class="w"> </span><span class="kn">import</span> <span class="n">models</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">django.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">timezone</span>
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Custom User Model</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="User">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">(</span><span class="n">AbstractUser</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Custom user model extending Django&#39;s AbstractUser.</span>
+
+<span class="sd">    Adds a role field to distinguish between readers, journalists, and editors.</span>
+<span class="sd">    Readers have subscription fields (ManyToMany) for following publishers</span>
+<span class="sd">    and journalists. Journalist content (articles and newsletters) is accessed</span>
+<span class="sd">    via reverse ForeignKey relations defined on the Article and Newsletter models.</span>
+
+<span class="sd">    Role behaviour:</span>
+<span class="sd">        - reader:     Can subscribe to publishers and journalists.</span>
+<span class="sd">                      Subscriptions are cleared if the role changes.</span>
+<span class="sd">        - journalist: Has articles and newsletters via reverse relations.</span>
+<span class="sd">                      Subscription fields are cleared on save.</span>
+<span class="sd">        - editor:     Manages article approval and content moderation.</span>
+<span class="sd">                      Subscription fields are cleared on save.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        role (str): The user&#39;s role. One of &#39;reader&#39;, &#39;journalist&#39;, &#39;editor&#39;.</span>
+<span class="sd">        subscribed_publishers (ManyToManyField): Publishers the reader follows.</span>
+<span class="sd">        subscribed_journalists (ManyToManyField): Journalists the reader follows.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Available role choices for the role field</span>
+    <span class="n">ROLE_CHOICES</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="p">(</span><span class="s1">&#39;journalist&#39;</span><span class="p">,</span> <span class="s1">&#39;Journalist&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;reader&#39;</span><span class="p">,</span>     <span class="s1">&#39;Reader&#39;</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;editor&#39;</span><span class="p">,</span>     <span class="s1">&#39;Editor&#39;</span><span class="p">),</span>
+    <span class="p">]</span>
+
+    <span class="c1"># Role field — defaults to reader for public registrations</span>
+    <span class="n">role</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="n">ROLE_CHOICES</span><span class="p">,</span>
+        <span class="n">default</span><span class="o">=</span><span class="s1">&#39;reader&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># --- Reader subscription fields ---</span>
+    <span class="c1"># Readers can subscribe to publishers to receive article notifications</span>
+    <span class="n">subscribed_publishers</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span>
+        <span class="s1">&#39;Publisher&#39;</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;subscribed_readers&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Readers can subscribe to individual journalists</span>
+    <span class="c1"># symmetrical=False means following is one-directional (not mutual)</span>
+    <span class="n">subscribed_journalists</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span>
+        <span class="s1">&#39;self&#39;</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">symmetrical</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;subscribed_readers_by&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># --- Journalist reverse relations ---</span>
+    <span class="c1"># Journalist articles are accessible via: user.articles.all()</span>
+    <span class="c1"># (defined by related_name=&#39;articles&#39; on Article.author ForeignKey)</span>
+    <span class="c1">#</span>
+    <span class="c1"># Journalist newsletters are accessible via: user.newsletters.all()</span>
+    <span class="c1"># (defined by related_name=&#39;newsletters&#39; on Newsletter.author ForeignKey)</span>
+
+<div class="viewcode-block" id="User.save">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User.save">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Override save to enforce role-based field restrictions.</span>
+
+<span class="sd">        Clears subscription fields for journalists and editors since</span>
+<span class="sd">        these roles do not have subscriptions. This ensures the database</span>
+<span class="sd">        stays consistent if a user&#39;s role is changed after registration.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            *args: Positional arguments passed to the parent save method.</span>
+<span class="sd">            **kwargs: Keyword arguments passed to the parent save method.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Save the user first before modifying ManyToMany relationships</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="c1"># Clear subscription fields for roles that don&#39;t use them</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;journalist&#39;</span><span class="p">,</span> <span class="s1">&#39;editor&#39;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_publishers</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_journalists</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="User.get_articles">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User.get_articles">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_articles</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return all articles authored by this user if they are a journalist.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: All articles by this journalist, or None if not a journalist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s1">&#39;journalist&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">articles</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="User.get_newsletters">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User.get_newsletters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_newsletters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return all newsletters authored by this user if they are a journalist.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: All newsletters by this journalist, or None if not a journalist.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s1">&#39;journalist&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">newsletters</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="User.get_subscribed_publishers">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User.get_subscribed_publishers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_subscribed_publishers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return all publishers this user is subscribed to if they are a reader.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: Subscribed publishers, or None if not a reader.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s1">&#39;reader&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_publishers</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+<div class="viewcode-block" id="User.get_subscribed_journalists">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.User.get_subscribed_journalists">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_subscribed_journalists</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Return all journalists this user is subscribed to if they are a reader.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            QuerySet: Subscribed journalists, or None if not a reader.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">role</span> <span class="o">==</span> <span class="s1">&#39;reader&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">subscribed_journalists</span><span class="o">.</span><span class="n">all</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">None</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a human-readable string representation of the user.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">username</span><span class="si">}</span><span class="s2"> (</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">role</span><span class="si">}</span><span class="s2">)&quot;</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Publisher Model</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Publisher">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.Publisher">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Publisher</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a news organisation or publication house.</span>
+
+<span class="sd">    Publishers can have multiple journalists and editors associated with them.</span>
+<span class="sd">    Articles can be published on behalf of a publisher rather than</span>
+<span class="sd">    (or in addition to) an individual journalist author.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        name (str): The publisher&#39;s display name.</span>
+<span class="sd">        website (str): An optional URL for the publisher&#39;s website.</span>
+<span class="sd">        journalists (ManyToManyField): Journalists associated with this publisher.</span>
+<span class="sd">        editors (ManyToManyField): Editors associated with this publisher.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># The publisher&#39;s display name — required</span>
+    <span class="n">name</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">100</span><span class="p">)</span>
+
+    <span class="c1"># Optional website URL for the publisher</span>
+    <span class="n">website</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">URLField</span><span class="p">(</span><span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Journalists who work for or are associated with this publisher</span>
+    <span class="n">journalists</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span>
+        <span class="n">User</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;publisher_journalists&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Editors who work for or are associated with this publisher</span>
+    <span class="n">editors</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span>
+        <span class="n">User</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;publisher_editors&#39;</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the publisher&#39;s name as its string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">name</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Article Model</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Article">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.Article">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Article</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a news article on The Speedy Spectator.</span>
+
+<span class="sd">    Articles must be associated with either an author (journalist) or a</span>
+<span class="sd">    publisher — this is enforced via the clean() method. Articles are</span>
+<span class="sd">    created as unapproved and must be reviewed and approved by an editor</span>
+<span class="sd">    before they appear in the public news feed.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        title (str): The article&#39;s headline.</span>
+<span class="sd">        content (str): The full article body text.</span>
+<span class="sd">        author (ForeignKey): The journalist who wrote the article. Optional.</span>
+<span class="sd">        publisher (ForeignKey): The publisher the article is written for. Optional.</span>
+<span class="sd">        created_at (datetime): Timestamp of when the article was created.</span>
+<span class="sd">        approved (bool): Whether the article has been approved by an editor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Article headline — required</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+    <span class="c1"># Full article body text — required</span>
+    <span class="n">content</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">()</span>
+
+    <span class="c1"># The journalist author — nullable to allow publisher-only articles</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span>
+        <span class="n">User</span><span class="p">,</span>
+        <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span>
+        <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;articles&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># The publisher — nullable to allow journalist-only articles</span>
+    <span class="n">publisher</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span>
+        <span class="n">Publisher</span><span class="p">,</span>
+        <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span>
+        <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;articles&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Automatically set to the current time when the article is created</span>
+    <span class="n">created_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+
+    <span class="c1"># All articles start as unapproved and require editor review</span>
+    <span class="n">approved</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">BooleanField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Article.clean">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.Article.clean">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Validate that the article has at least one of author or publisher.</span>
+
+<span class="sd">        Called automatically by full_clean() in the view before saving.</span>
+<span class="sd">        Raises a ValidationError if neither field is set, ensuring data</span>
+<span class="sd">        integrity at the model level.</span>
+
+<span class="sd">        Raises:</span>
+<span class="sd">            ValidationError: If both author and publisher are None.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">author</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">publisher</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ValidationError</span><span class="p">(</span>
+                <span class="s2">&quot;An article must have either an author or a publisher.&quot;</span>
+            <span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the article title as its string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span></div>
+
+
+
+<span class="c1"># ---------------------------------------------------------------------------</span>
+<span class="c1"># Newsletter Model</span>
+<span class="c1"># ---------------------------------------------------------------------------</span>
+
+<div class="viewcode-block" id="Newsletter">
+<a class="viewcode-back" href="../../newsApp.html#newsApp.forms.Newsletter">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Newsletter</span><span class="p">(</span><span class="n">models</span><span class="o">.</span><span class="n">Model</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Represents a curated newsletter created by a journalist or editor.</span>
+
+<span class="sd">    Newsletters are collections of approved articles grouped together</span>
+<span class="sd">    under a title and description. They can be created and managed by</span>
+<span class="sd">    journalists and editors, and viewed by all users including readers.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        title (str): The newsletter&#39;s title.</span>
+<span class="sd">        description (str): An optional description of the newsletter&#39;s content.</span>
+<span class="sd">        created_at (datetime): Timestamp of when the newsletter was created.</span>
+<span class="sd">        author (ForeignKey): The journalist or editor who created the newsletter.</span>
+<span class="sd">        articles (ManyToManyField): The articles included in this newsletter.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Newsletter title — required</span>
+    <span class="n">title</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+    <span class="c1"># Optional description summarising the newsletter&#39;s content</span>
+    <span class="n">description</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">TextField</span><span class="p">(</span><span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">null</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Automatically set to the current time when the newsletter is created</span>
+    <span class="n">created_at</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">DateTimeField</span><span class="p">(</span><span class="n">default</span><span class="o">=</span><span class="n">timezone</span><span class="o">.</span><span class="n">now</span><span class="p">)</span>
+
+    <span class="c1"># The journalist or editor who created this newsletter</span>
+    <span class="n">author</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ForeignKey</span><span class="p">(</span>
+        <span class="n">User</span><span class="p">,</span>
+        <span class="n">on_delete</span><span class="o">=</span><span class="n">models</span><span class="o">.</span><span class="n">CASCADE</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;newsletters&#39;</span>
+    <span class="p">)</span>
+
+    <span class="c1"># The articles curated into this newsletter — optional and flexible</span>
+    <span class="n">articles</span> <span class="o">=</span> <span class="n">models</span><span class="o">.</span><span class="n">ManyToManyField</span><span class="p">(</span>
+        <span class="n">Article</span><span class="p">,</span>
+        <span class="n">blank</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">related_name</span><span class="o">=</span><span class="s1">&#39;newsletters&#39;</span>
+    <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the newsletter title as its string representation.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">title</span></div>
+
+
+<span class="c1"># Docstrings verified</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="Main">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">Speedy Spectator</a></h1>
+
+
+
+
+
+
+
+
+
+<search id="searchbox" style="display: none" role="search">
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Search"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</search>
+<script>document.getElementById('searchbox').style.display = "block"</script><h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &#169;2026, Scott Bedford.
+      
+      |
+      Powered by <a href="https://www.sphinx-doc.org/">Sphinx 9.1.0</a>
+      &amp; <a href="https://alabaster.readthedocs.io">Alabaster 1.0.0</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
