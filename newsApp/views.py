@@ -852,4 +852,4 @@ def unsubscribe_journalist(request, pk):
         'item': journalist,
         'action': 'unsubscribe from',
         'cancel_url': 'journalist_list',
-    })
+    })# Docstrings verified
