@@ -185,3 +185,4 @@ class NewsletterSerializer(serializers.ModelSerializer):
         ]
         # These fields are managed server-side and must not be set via the API
         read_only_fields = ['created_at', 'author']
+# Docstrings verified
