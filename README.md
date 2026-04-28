@@ -1,4 +1,6 @@
-# The Speedy Spectator — News Application
+
+
+The Speedy Spectator — News Application
 
 A Django-based news portal supporting multiple user roles, article management,
 newsletter creation, and a RESTful API with JWT authentication.
@@ -10,7 +12,8 @@ newsletter creation, and a RESTful API with JWT authentication.
 The Speedy Spectator is a news application built as part of a Level 2
 Introduction to Software Engineering capstone project. It allows journalists
 to write and publish articles, editors to review and approve content, and
-readers to subscribe to journalists and publishers.
+readers to subscribe to journalists and publishers and receive notifications
+when new content is approved.
 
 ---
 
@@ -19,7 +22,9 @@ readers to subscribe to journalists and publishers.
 - Role-based access control (Reader, Journalist, Editor)
 - Article creation, approval, and publishing workflow
 - Newsletter creation and management
+- Publisher management — journalists can join publishers, editors can manage them
 - Reader subscriptions to journalists and publishers
+- Email notifications when articles are approved
 - RESTful API with JWT token authentication
 - Django Signals for email notifications on article approval
 - Internal API endpoint for simulating third-party integration
@@ -30,10 +35,11 @@ readers to subscribe to journalists and publishers.
 ## Tech Stack
 
 - Python 3.12
-- Django 5.1
+- Django 4.2.30
 - Django REST Framework
 - djangorestframework-simplejwt
-- MariaDB / MySQL
+- MariaDB
+- PyMySQL
 - HTML / CSS (custom stylesheet)
 
 ---
@@ -120,16 +126,13 @@ cp .env.example .env
 ```
 
 Open `.env` and update the values with your own credentials:
-
-```
 SECRET_KEY=your-secret-key-here
 DEBUG=True
-DB_NAME=news_db
+DB_NAME=news_project
 DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 DB_HOST=127.0.0.1
 DB_PORT=3306
-```
 
 > **Note:** Never commit your `.env` file to version control.
 > The `.env.example` file is provided as a safe template.
@@ -139,15 +142,15 @@ DB_PORT=3306
 Log in to MariaDB:
 
 ```bash
-mysql -u root -p
+mysql -u root -p -h 127.0.0.1 -P 3306
 ```
 
 Run the following SQL commands to create the database and user:
 
 ```sql
-CREATE DATABASE news_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE news_project CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'your_db_user'@'localhost' IDENTIFIED BY 'your_db_password';
-GRANT ALL PRIVILEGES ON news_db.* TO 'your_db_user'@'localhost';
+GRANT ALL PRIVILEGES ON news_project.* TO 'your_db_user'@'localhost';
 FLUSH PRIVILEGES;
 EXIT;
 ```
@@ -179,20 +182,74 @@ Visit `http://127.0.0.1:8000` in your browser.
 
 ## User Roles
 
-| Role       | Permissions                                               |
-|------------|-----------------------------------------------------------|
-| Reader     | View approved articles and newsletters, subscribe         |
-| Journalist | Create, view, update, delete own articles and newsletters |
-| Editor     | View, update, delete all articles and newsletters, approve|
+| Role       | Permissions                                                                     |
+|------------|---------------------------------------------------------------------------------|
+| Reader     | View approved articles and newsletters, subscribe to journalists and publishers |
+| Journalist | Create, view, update, delete own articles and newsletters, join/leave publishers|
+| Editor     | View, update, delete all articles and newsletters, approve/reject articles,     |
+|            | create/manage publishers, register new editors                                  |
 
-### Creating the First Editor Account
+### Creating the first Editor account
 
 Since editor registration is restricted to existing editors, create the
 first editor via the Django admin panel:
 
-1. Log in to `http://127.0.0.1:8000/admin/` with your superuser credentials.
-2. Navigate to `newsApp > Users`.
-3. Find the user and set their role to `editor`.
+1. Run the server and go to `http://127.0.0.1:8000/admin/`
+2. Log in with your superuser credentials
+3. Click **Users** and find your user
+4. Scroll to the **Role** section and change it to `editor`
+5. Click **Save**
+
+Once you have one editor account, new editors can be registered through
+the app at the login page when logged in as an editor.
+
+---
+
+## Publishers
+
+Publishers represent news organisations. They are managed as objects
+rather than user roles.
+
+### Creating a publisher (Editor only)
+
+1. Log in as an editor
+2. Click **Publishers** in the navbar
+3. Click **+ Create Publisher**
+4. Enter the publisher name and optional website
+5. Click **Create Publisher**
+
+### Managing publisher journalists (Editor only)
+
+1. Log in as an editor
+2. Click **Publishers** in the navbar
+3. Click **View** on a publisher
+4. Click **+ Add Journalist** to add a journalist to the publisher
+5. Click **Remove** next to a journalist to remove them
+
+### Joining a publisher (Journalist only)
+
+1. Log in as a journalist
+2. Click **Publishers** in the navbar
+3. Find the publisher you want to join
+4. Click **Join**
+5. To leave a publisher click **Leave** on the same page
+
+### Subscribing to publishers and journalists (Reader only)
+
+1. Log in as a reader
+2. Click **Publishers** in the navbar to browse and subscribe to publishers
+3. Click **Journalists** in the navbar to browse and subscribe to journalists
+4. Click **Subscribe** to follow a journalist or publisher
+5. Click **Unsubscribe** to stop following
+6. You will receive email notifications when subscribed content is approved
+
+---
+
+## Reader Subscriptions
+
+Readers can subscribe to both journalists and publishers. When an article
+from a subscribed journalist or publisher is approved by an editor, the
+reader receives an email notification automatically via Django Signals.
 
 ---
 
@@ -272,29 +329,132 @@ When an article is approved by an editor:
 python manage.py test newsApp
 ```
 
+Expected output:
+Found 44 test(s).
+Ran 44 tests in ~13s
+OK
+
 ---
+
+## Daily Startup
+
+```bash
+# Start MariaDB
+brew services start mariadb
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Start the server
+python manage.py runserver
+```
+
+## Database Backup
+
+Run this before shutting down to avoid data loss:
+
+```bash
+mysqldump -u root -p -h 127.0.0.1 -P 3306 news_project > news_project_backup.sql
+```
+
+Restore from backup:
+
+```bash
+mysql -u admin -p -h 127.0.0.1 -P 3306 news_project < news_project_backup.sql
+```
+
+---
+
+## Project Structure
+news_project/
+├── manage.py
+├── requirements.txt
+├── README.md
+├── .env.example
+├── newsApp/
+│   ├── models.py
+│   ├── views.py
+│   ├── api_views.py
+│   ├── serializers.py
+│   ├── permissions.py
+│   ├── signals.py
+│   ├── forms.py
+│   ├── admin.py
+│   ├── urls.py
+│   ├── tests.py
+│   ├── templates/
+│   │   └── newsApp/
+│   │       ├── base.html
+│   │       ├── home.html
+│   │       ├── login_register.html
+│   │       ├── register_journalist.html
+│   │       ├── news_list.html
+│   │       ├── article_detail.html
+│   │       ├── create_article.html
+│   │       ├── edit_article.html
+│   │       ├── pending_articles.html
+│   │       ├── journalist_dashboard.html
+│   │       ├── manage_newsletters.html
+│   │       ├── newsletter_list.html
+│   │       ├── newsletter_detail.html
+│   │       ├── edit_newsletter.html
+│   │       ├── publisher_list.html
+│   │       ├── publisher_detail.html
+│   │       ├── publisher_join_confirm.html
+│   │       ├── publisher_add_journalist.html
+│   │       ├── create_publisher.html
+│   │       ├── journalist_list.html
+│   │       ├── subscribe_confirm.html
+│   │       └── delete_confirm.html
+│   └── static/
+│       └── newsApp/
+│           ├── css/
+│           │   └── base.css
+│           └── images/
+└── news_project/
+├── settings.py
+├── urls.py
+└── wsgi.py
+
+---
+
+## Testing
+
+python manage.py test newsApp
 
 ## Troubleshooting
 
 ### Access denied for database user
 
-Ensure the credentials in your `.env` file match the MariaDB user you created
-in Step 5. If you're on macOS and getting socket errors, set `DB_HOST=127.0.0.1`
+Ensure the credentials in your `.env` file match the MariaDB user you created.
+If you are on macOS and getting socket errors, set `DB_HOST=127.0.0.1`
 instead of `localhost`.
 
-### `load_dotenv` not loading variables
+### MariaDB not starting
 
-Ensure your `.env` file is in the same directory as `manage.py` (the project
-root). The settings file loads it using the absolute path:
-`load_dotenv(BASE_DIR / ".env")`.
+```bash
+brew services restart mariadb
+```
+
+### Virtual environment not activating
+
+Make sure you are in the project root directory where `manage.py` is located:
+```bash
+cd news_project
+source venv/bin/activate
+```
 
 ### `python3` not found on Windows
 
-Use `python` instead of `python3` on Windows. All commands in this README
-that use `python3` should be run as `python` on Windows.
+Use `python` instead of `python3` on Windows.
 
 ---
 
+## License
+
+This project was created for educational purposes as part of a Level 2
+Introduction to Software Engineering capstone project.
+
 ## Author
 
-Created by Scott Bedford as part of a software engineering capstone project.
+Created by Scott Bedford.

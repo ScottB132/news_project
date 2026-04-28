@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}The Speedy Spectator{% endblock %}</title>
-    <link rel="stylesheet" href="{% static 'newsApp/css/base.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'newsApp/css/base.css' %}?v=7">
 </head>
 
 <body>
@@ -33,21 +33,23 @@
                 {% if user.is_authenticated %}
 
                     <a href="{% url 'news_list' %}" class="btn btn-primary">News</a>
-                    
+                    <a href="{% url 'publisher_list' %}" class="btn btn-primary">Publishers</a>
 
                     {% if user.role == 'journalist' %}
                         <a href="{% url 'create_article' %}" class="btn btn-success">Write</a>
-                        <a href="{% url 'journalist_dashboard' %}" class="btn btn-primary">My Articles</a>
+                        <a href="{% url 'journalist_dashboard' %}" class="btn btn-primary">Articles</a>
                         <a href="{% url 'manage_newsletters' %}" class="btn btn-secondary">Newsletters</a>
                     {% endif %}
 
                     {% if user.role == 'editor' %}
-                        <a href="{% url 'pending_articles' %}" class="btn btn-secondary">Editor Queue</a>
+                        <a href="{% url 'pending_articles' %}" class="btn btn-secondary">Queue</a>
                         <a href="{% url 'newsletter_list' %}" class="btn btn-primary">Newsletters</a>
                     {% endif %}
 
                     {% if user.role == 'reader' %}
                         <a href="{% url 'newsletter_list' %}" class="btn btn-primary">Newsletters</a>
+                        <a href="{% url 'journalist_list' %}" class="btn btn-primary">Journalists</a>
+
                     {% endif %}
 
                     <a href="{% url 'logout_user' %}" class="btn btn-danger">Logout</a>
@@ -62,7 +64,7 @@
     {% if messages %}
         <div class="messages-container">
             {% for message in messages %}
-                <p class="error-message">{{ message }}</p>
+                <p class="message message-{{ message.tags }}">{{ message }}</p>
             {% endfor %}
         </div>
     {% endif %}
@@ -73,6 +75,9 @@
 
     <footer>
         <p>&copy; 2026 The Speedy Spectator News Portal</p>
-    </foot
+    </footer>
+
+</body>
+</html>
 
     

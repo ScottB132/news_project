@@ -1,0 +1,18 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Join Publisher - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h2>Join {{ publisher.name }}</h2>
+    <p>Are you sure you want to register as a journalist with <strong>{{ publisher.name }}</strong>?</p>
+
+    <form method="POST">
+        {% csrf_token %}
+        <div class="card-actions">
+            <button type="submit" class="btn btn-success">Yes, Join</button>
+            <a href="{% url 'publisher_list' %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

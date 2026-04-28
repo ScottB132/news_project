@@ -30,6 +30,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# Load environment variables from the .env file in the project root
+# This must be called before any os.getenv() calls below
+load_dotenv()
+
 
 # ---------------------------------------------------------------------------
 # Path Configuration
@@ -38,13 +42,6 @@ from dotenv import load_dotenv
 # Build paths inside the project using BASE_DIR
 # BASE_DIR points to the project root (the directory containing manage.py)
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Load environment variables from the .env file in the project root.
-# BASE_DIR is used to construct the absolute path so load_dotenv always
-# finds the file regardless of the working directory the server is started
-# from.
-load_dotenv(BASE_DIR / ".env")
 
 
 # ---------------------------------------------------------------------------
@@ -61,7 +58,7 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 # Hosts allowed to serve the application
 # Add your domain here when deploying to production
 # e.g. ALLOWED_HOSTS = ['speedyspectator.com', 'www.speedyspectator.com']
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
+ALLOWED_HOSTS = []
 
 
 # ---------------------------------------------------------------------------
@@ -113,12 +110,25 @@ INSTALLED_APPS = [
 # ---------------------------------------------------------------------------
 
 MIDDLEWARE = [
+    # Security headers (HSTS, etc.)
     'django.middleware.security.SecurityMiddleware',
+
+    # Session handling
     'django.contrib.sessions.middleware.SessionMiddleware',
+
+    # Common HTTP utilities (trailing slash redirect, etc.)
     'django.middleware.common.CommonMiddleware',
+
+    # CSRF protection for form submissions
     'django.middleware.csrf.CsrfViewMiddleware',
+
+    # Attaches the authenticated user to each request
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+
+    # Flash messages framework
     'django.contrib.messages.middleware.MessageMiddleware',
+
+    # Clickjacking protection via X-Frame-Options header
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -127,6 +137,7 @@ MIDDLEWARE = [
 # URL Configuration
 # ---------------------------------------------------------------------------
 
+# The root URL configuration module for the project
 ROOT_URLCONF = 'news_project.urls'
 
 
@@ -136,14 +147,27 @@ ROOT_URLCONF = 'news_project.urls'
 
 TEMPLATES = [
     {
+        # Use Django's built-in template engine
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
+
+        # No additional template directories outside of app templates
         'DIRS': [],
+
+        # Automatically find templates in each app's templates/ directory
         'APP_DIRS': True,
+
         'OPTIONS': {
             'context_processors': [
+                # Adds debug and sql_queries to the template context
                 'django.template.context_processors.debug',
+
+                # Adds the current request object to the template context
                 'django.template.context_processors.request',
+
+                # Adds the authenticated user and permissions to context
                 'django.contrib.auth.context_processors.auth',
+
+                # Adds flash messages to the template context
                 'django.contrib.messages.context_processors.messages',
             ],
         },
@@ -155,6 +179,7 @@ TEMPLATES = [
 # WSGI Configuration
 # ---------------------------------------------------------------------------
 
+# The WSGI application used by Django's built-in server and production servers
 WSGI_APPLICATION = 'news_project.wsgi.application'
 
 
@@ -162,16 +187,16 @@ WSGI_APPLICATION = 'news_project.wsgi.application'
 # Database Configuration
 # ---------------------------------------------------------------------------
 
-# MySQL / MariaDB — credentials loaded from .env file.
-# Copy .env.example to .env and update with your own credentials.
+# MySQL database — credentials loaded from .env
+# Requires PyMySQL installed and configured in newsApp/__init__.py
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.getenv('DB_NAME', 'news_db'),
-        'USER': os.getenv('DB_USER', 'admin'),
-        'PASSWORD': os.getenv('DB_PASSWORD', ''),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '3306'),
+        'NAME': 'news_db',
+        'USER': 'admin',
+        'PASSWORD': 'admin',
+        'HOST': '127.0.0.1',
+        'PORT': '3306',
     }
 }
 
@@ -180,30 +205,23 @@ DATABASES = {
 # Password Validation
 # ---------------------------------------------------------------------------
 
+# Enforce password strength requirements for all user registrations
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': (
-            'django.contrib.auth.password_validation'
-            '.UserAttributeSimilarityValidator'
-        ),
+        # Rejects passwords too similar to the username or email
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation'
-            '.MinimumLengthValidator'
-        ),
+        # Rejects passwords shorter than 8 characters (Django default)
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation'
-            '.CommonPasswordValidator'
-        ),
+        # Rejects commonly used passwords (e.g. 'password', '12345678')
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
     },
     {
-        'NAME': (
-            'django.contrib.auth.password_validation'
-            '.NumericPasswordValidator'
-        ),
+        # Rejects passwords that are entirely numeric
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
 
@@ -213,9 +231,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # ---------------------------------------------------------------------------
 
 REST_FRAMEWORK = {
+    # Use JWT tokens for API authentication
+    # Tokens are obtained via POST /api/token/ and included in the
+    # Authorization: Bearer <token> header on subsequent requests
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+
+    # Require authentication for all API endpoints by default
+    # Individual views can override this with their own permission_classes
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated',
     ),
@@ -226,11 +250,16 @@ REST_FRAMEWORK = {
 # Email Configuration
 # ---------------------------------------------------------------------------
 
-# Console backend prints emails to the terminal during development.
-# Replace with a real SMTP backend for production deployment.
+# Console backend prints emails to the terminal during development
+# Replace with a real SMTP backend for production deployment
+# e.g. EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# SMTP server settings — only used when switching to SMTP backend
 EMAIL_HOST = 'localhost'
 EMAIL_PORT = 25
+
+# The from address used in all outgoing notification emails
 DEFAULT_FROM_EMAIL = 'noreply@speedyspectator.com'
 
 
@@ -238,9 +267,16 @@ DEFAULT_FROM_EMAIL = 'noreply@speedyspectator.com'
 # Internationalisation
 # ---------------------------------------------------------------------------
 
+# Default language for the application
 LANGUAGE_CODE = 'en-us'
+
+# Store all datetime values in UTC in the database
 TIME_ZONE = 'UTC'
+
+# Enable Django's translation framework
 USE_I18N = True
+
+# Enable timezone-aware datetimes
 USE_TZ = True
 
 
@@ -248,7 +284,11 @@ USE_TZ = True
 # Static Files
 # ---------------------------------------------------------------------------
 
+# URL prefix for serving static files (CSS, JS, images)
 STATIC_URL = '/static/'
+
+# Additional directories where Django will look for static files
+# outside of each app's static/ directory
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'newsApp', 'static'),
 ]
@@ -258,4 +298,6 @@ STATICFILES_DIRS = [
 # Default Primary Key
 # ---------------------------------------------------------------------------
 
+# Use 64-bit integer primary keys for all models by default
+# Overrides Django's default of 32-bit AutoField
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

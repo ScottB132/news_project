@@ -1,0 +1,26 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Add Journalist - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="form-container form-container--wide">
+    <h2>Add Journalist to {{ publisher.name }}</h2>
+
+    <form method="POST">
+        {% csrf_token %}
+        <label for="journalist_id">Select Journalist:</label>
+        <select name="journalist_id" id="journalist_id">
+            {% for journalist in journalists %}
+                {% if journalist not in publisher.journalists.all %}
+                    <option value="{{ journalist.id }}">{{ journalist.username }}</option>
+                {% endif %}
+            {% endfor %}
+        </select>
+
+        <div class="card-actions">
+            <button type="submit" class="btn btn-success">Add Journalist</button>
+            <a href="{% url 'publisher_detail' publisher.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

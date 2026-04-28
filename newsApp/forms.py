@@ -22,7 +22,7 @@ Forms defined here:
 from django import forms
 from django.contrib.auth.forms import UserCreationForm
 
-from .models import Article, Newsletter, User
+from .models import Article, Newsletter, User, Publisher
 
 
 # ---------------------------------------------------------------------------
@@ -151,3 +151,16 @@ class JournalistRegistrationForm(UserCreationForm):
         # Include email alongside the default username field
         # Role is assigned in the view from the registration URL
         fields = ('username', 'email')
+
+
+# -------------------------
+# Publisher Form
+# -------------------------
+class PublisherForm(forms.ModelForm):
+    """
+    Form for creating and editing publishers.
+    Used by editors to create new publishing houses.
+    """
+    class Meta:
+        model = Publisher
+        fields = ['name', 'website']

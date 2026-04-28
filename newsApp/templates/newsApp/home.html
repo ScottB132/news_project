@@ -4,13 +4,6 @@
 {% block title %}Home - The Speedy Spectator{% endblock %}
 
 {% block content %}
-<!-- DEBUG BOX (Moved inside the block to fix the error) -->
-<div style="background: yellow; color: black; padding: 15px; border: 2px solid red; margin-bottom: 20px; text-align: center;">
-    Logged in as: <strong>{{ user.username }}</strong> | 
-    Role in DB: <strong>"{{ user.role }}"</strong> | 
-    Is Authenticated: <strong>{{ user.is_authenticated }}</strong>
-</div>
-
 <div class="home-container">
 
     {% if user.role == 'journalist' %}
@@ -25,6 +18,7 @@
             <a href="{% url 'create_article' %}" class="btn btn-success">Write New Article</a>
             <a href="{% url 'journalist_dashboard' %}" class="btn btn-primary">My Articles</a>
             <a href="{% url 'manage_newsletters' %}" class="btn btn-secondary">Manage Newsletters</a>
+            <a href="{% url 'publisher_list' %}" class="btn btn-primary">Publishers</a>
         </div>
 
     {% elif user.role == 'editor' %}
@@ -32,22 +26,26 @@
         <p>Welcome back, <strong>{{ user.username }}</strong>!</p>
 
         <div class="card-actions" style="justify-content: center;">
-            <a href="{% url 'pending_articles' %}" class="btn btn-secondary">Open Editor Queue</a>
-            <a href="{% url 'news_list' %}" class="btn btn-primary">View All Articles</a>
+            <a href="{% url 'pending_articles' %}" class="btn btn-secondary">Editor Queue</a>
+            <a href="{% url 'news_list' %}" class="btn btn-primary">All Articles</a>
+            <a href="{% url 'publisher_list' %}" class="btn btn-primary">Publishers</a>
         </div>
 
     {% else %}
         <h1>Welcome to The Speedy Spectator!</h1>
 
         <img src="{% static 'newsApp/images/read_all_about_it.jpg' %}"
-             alt="Read All About It"
-             class="home-image">
+            alt="Read All About It"
+            class="home-image">
 
         <p>Hello, <strong>{{ user.username }}</strong>!</p>
 
         <div class="card-actions" style="justify-content: center;">
             <a href="{% url 'news_list' %}" class="btn btn-primary">Read Latest News</a>
+            <a href="{% url 'journalist_list' %}" class="btn btn-primary">Browse Journalists</a>
+            <a href="{% url 'publisher_list' %}" class="btn btn-primary">Browse Publishers</a>
         </div>
+
     {% endif %}
 
 </div>

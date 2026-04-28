@@ -6,44 +6,87 @@
 <div class="news-list-container">
     <h1 class="queue-heading">My Submissions</h1>
 
-    <div class="queue-heading" style="margin-bottom: 30px;">
+    <div class="card-actions" style="justify-content: center; margin-bottom: 30px;">
         <a href="{% url 'create_article' %}" class="btn btn-success">+ Write New Article</a>
+        <a href="{% url 'manage_newsletters' %}" class="btn btn-secondary">+ Create Newsletter</a>
     </div>
 
     {% for article in articles %}
-    <div class="news-card">
+        <div class="news-card">
 
-        {% if article.approved %}
-            <span class="status-badge status-live">● Live</span>
-        {% else %}
-            <span class="status-badge status-pending">● Awaiting Approval</span>
-        {% endif %}
+            {% if article.approved %}
+                <span class="status-badge status-live">● Live</span>
+            {% else %}
+                <span class="status-badge status-pending">● Awaiting Approval</span>
+            {% endif %}
 
-        <h2>{{ article.title }}</h2>
-        <p>{{ article.content|truncatewords:30 }}</p>
+            <h2>{{ article.title }}</h2>
+            <p>{{ article.content|truncatewords:30 }}</p>
 
-        <div class="story-meta">
-            Submitted on {{ article.created_at|date:"M d, Y" }}
+            <div class="story-meta">
+                Submitted on {{ article.created_at|date:"M d, Y" }}
+            </div>
+
+            <div class="card-actions">
+                <a href="{% url 'preview_article' article.id %}" class="btn btn-primary">View</a>
+                <a href="{% url 'edit_article' article.id %}" class="btn btn-secondary">Edit</a>
+
+                <form method="POST" action="{% url 'delete_article' article.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to delete this article?')">
+                        Delete
+                    </button>
+                </form>
+            </div>
+
         </div>
 
-        <div class="card-actions">
-            <a href="{% url 'preview_article' article.id %}" class="btn btn-primary">View</a>
-            <a href="{% url 'edit_article' article.id %}" class="btn btn-secondary">Edit</a>
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>You haven't written any articles yet.</p>
+        </div>
+    {% endfor %}
 
-            <form method="POST" action="{% url 'delete_article' article.id %}">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('Are you sure you want to delete this article?')">
-                    Delete
-                </button>
-            </form>
+    <!-- ===== NEWSLETTERS SECTION ===== -->
+    <h2 class="queue-heading" style="margin-top: 40px;">My Newsletters</h2>
+
+    <div class="card-actions" style="justify-content: center; margin-bottom: 20px;">
+        <a href="{% url 'manage_newsletters' %}" class="btn btn-success">+ Create Newsletter</a>
+    </div>
+
+    {% for newsletter in newsletters %}
+        <div class="news-card">
+            <h2>{{ newsletter.title }}</h2>
+            <p>{{ newsletter.description|truncatewords:20 }}</p>
+
+            <div class="story-meta">
+                Created on {{ newsletter.created_at|date:"M d, Y" }}
+                &nbsp;|&nbsp;
+                <strong>{{ newsletter.articles.count }}</strong> articles included
+            </div>
+
+            <div class="card-actions">
+                <a href="{% url 'newsletter_detail' newsletter.pk %}" class="btn btn-primary">View</a>
+                <a href="{% url 'update_newsletter' newsletter.pk %}" class="btn btn-secondary">Edit</a>
+
+                <form method="POST" action="{% url 'delete_newsletter' newsletter.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger"
+                            onclick="return confirm('Are you sure you want to delete this newsletter?')">
+                        Delete
+                    </button>
+                </form>
+            </div>
         </div>
 
-    </div>
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>You haven't created any newsletters yet.
+               <a href="{% url 'manage_newsletters' %}">Create your first newsletter</a>.
+            </p>
+        </div>
+    {% endfor %}
 
-{% empty %}
-    <div class="news-card empty-queue">
-        <p>You haven't written any articles yet.</p>
-    </div>
-{% endfor %}
+</div>
 {% endblock %}

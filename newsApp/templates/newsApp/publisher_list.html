@@ -1,0 +1,70 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Publishers - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Publishers</h1>
+
+    {% if user.role == 'editor' %}
+        <div class="card-actions" style="justify-content: center; margin-bottom: 20px;">
+            <a href="{% url 'create_publisher' %}" class="btn btn-success">+ Create Publisher</a>
+        </div>
+    {% endif %}
+
+    {% for publisher in publishers %}
+        <div class="news-card">
+            <h2>{{ publisher.name }}</h2>
+            {% if publisher.website %}
+                <p><a href="{{ publisher.website }}" target="_blank">{{ publisher.website }}</a></p>
+            {% endif %}
+            <p><strong>Journalists:</strong> {{ publisher.journalists.count }}</p>
+            <p><strong>Editors:</strong> {{ publisher.editors.count }}</p>
+
+            <div class="card-actions">
+                <a href="{% url 'publisher_detail' publisher.pk %}" class="btn btn-primary">View</a>
+
+                {% if user.role == 'reader' %}
+                    {% if publisher in user.subscribed_publishers.all %}
+                        <form method="POST" action="{% url 'unsubscribe_publisher' publisher.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Unsubscribe from {{ publisher.name }}?')">
+                                Unsubscribe
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{% url 'subscribe_publisher' publisher.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">Subscribe</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+
+                {% if user.role == 'journalist' %}
+                    {% if user in publisher.journalists.all %}
+                        <form method="POST" action="{% url 'leave_publisher' publisher.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Leave {{ publisher.name }}?')">
+                                Leave
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{% url 'join_publisher' publisher.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">Join</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>No publishers registered yet.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}{{ publisher.name }} - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">{{ publisher.name }}</h1>
+
+    {% if publisher.website %}
+        <p style="text-align: center;">
+            <a href="{{ publisher.website }}" target="_blank">{{ publisher.website }}</a>
+        </p>
+    {% endif %}
+
+    {% if user.role == 'editor' %}
+        <div class="card-actions" style="justify-content: center; margin-bottom: 20px;">
+            <a href="{% url 'add_journalist_to_publisher' publisher.pk %}" class="btn btn-success">
+                + Add Journalist
+            </a>
+        </div>
+    {% endif %}
+
+    <div class="news-card">
+        <h2>Journalists</h2>
+        {% for journalist in publisher.journalists.all %}
+            <div class="story-meta" style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                <strong>{{ journalist.username }}</strong> — {{ journalist.email }}
+                {% if user.role == 'editor' %}
+                    <form method="POST"
+                          action="{% url 'remove_journalist_from_publisher' publisher.pk journalist.id %}"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger"
+                                onclick="return confirm('Remove {{ journalist.username }}?')">
+                            Remove
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        {% empty %}
+            <p>No journalists registered with this publisher yet.</p>
+        {% endfor %}
+    </div>
+
+    <div class="news-card">
+        <h2>Editors</h2>
+        {% for editor in publisher.editors.all %}
+            <div class="story-meta" style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                <strong>{{ editor.username }}</strong> — {{ editor.email }}
+            </div>
+        {% empty %}
+            <p>No editors registered with this publisher yet.</p>
+        {% endfor %}
+    </div>
+
+    <div class="card-actions" style="justify-content: center; margin-top: 20px;">
+        <a href="{% url 'publisher_list' %}" class="btn btn-primary">Back to Publishers</a>
+    </div>
+
+</div>
+{% endblock %}

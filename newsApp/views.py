@@ -25,7 +25,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
 
 from .forms import ArticleForm, JournalistRegistrationForm, NewsletterForm
-from .models import Article, Newsletter, User
+from .models import Article, Newsletter, User, Publisher
 
 
 # ---------------------------------------------------------------------------
@@ -282,18 +282,24 @@ def article_detail(request, pk):
 @login_required
 def journalist_dashboard(request):
     """
-    Render the journalist's personal dashboard showing their own articles.
-
-    Only shows articles authored by the currently logged-in journalist.
+    Render the journalist's personal dashboard showing their own
+    articles and newsletters.
     """
     articles = Article.objects.filter(
+        author=request.user
+    ).order_by('-created_at')
+
+    newsletters = Newsletter.objects.filter(
         author=request.user
     ).order_by('-created_at')
 
     return render(
         request,
         'newsApp/journalist_dashboard.html',
-        {'articles': articles}
+        {
+            'articles': articles,
+            'newsletters': newsletters,
+        }
     )
 
 
@@ -302,28 +308,28 @@ def create_article(request):
     """
     Allow a logged-in journalist to create a new article.
 
-    The author is set automatically from the current user.
-    The article is saved as unapproved and submitted for editor review.
-    Runs full_clean() to trigger model-level validation.
+    The author is assigned before validation runs so the model-level
+    clean() method can correctly check that either author or publisher
+    is set before raising a ValidationError.
     """
     form = ArticleForm(request.POST or None)
 
-    if request.method == 'POST' and form.is_valid():
-        # Save without committing to assign author and approval status
-        article = form.save(commit=False)
-        article.author = request.user
-        article.approved = False  # All new articles require editor approval
+    if request.method == 'POST':
+        # Save without committing so we can assign author before validation
+        if form.is_valid():
+            article = form.save(commit=False)
+            article.author = request.user
+            article.approved = False
 
-        try:
-            # Trigger model-level validation (e.g. author or publisher required)
-            article.full_clean()
-            article.save()
-            messages.success(request, "Article submitted for review.")
-            return redirect('journalist_dashboard')
-
-        except ValidationError as e:
-            # Attach model validation errors back to the form
-            form.add_error(None, e)
+            try:
+                # full_clean() now runs AFTER author is assigned
+                # so the clean() check will always pass for logged-in journalists
+                article.full_clean()
+                article.save()
+                messages.success(request, "Article submitted for review.")
+                return redirect('journalist_dashboard')
+            except ValidationError as e:
+                form.add_error(None, e)
 
     return render(request, 'newsApp/create_article.html', {'form': form})
 
@@ -333,21 +339,14 @@ def create_article(request):
 def edit_article(request, pk):
     """
     Allow a journalist to edit one of their own articles.
-
-    Resets the approved status to False so the article is re-reviewed
-    by an editor before going live again.
-
-    Args:
-        pk (int): The primary key of the article to edit.
+    Author is preserved before validation runs.
     """
-    # Ensure the journalist can only edit their own articles
     article = get_object_or_404(Article, pk=pk, author=request.user)
     form = ArticleForm(request.POST or None, instance=article)
 
     if request.method == 'POST' and form.is_valid():
         article = form.save(commit=False)
-
-        # Reset approval so the updated article goes back for review
+        article.author = request.user
         article.approved = False
 
         try:
@@ -355,12 +354,10 @@ def edit_article(request, pk):
             article.save()
             messages.success(request, "Article updated and resubmitted for review.")
             return redirect('journalist_dashboard')
-
         except ValidationError as e:
             form.add_error(None, e)
 
     return render(request, 'newsApp/edit_article.html', {'form': form})
-
 
 @login_required
 @user_passes_test(is_journalist)
@@ -695,3 +692,164 @@ def newsletter_detail(request, pk):
         'newsApp/newsletter_detail.html',
         {'newsletter': newsletter}
     )
+
+
+# --- Publisher list ---
+@login_required
+def publisher_list(request):
+    """Display all publishers."""
+    publishers = Publisher.objects.all()
+    return render(request, 'newsApp/publisher_list.html', {'publishers': publishers})
+
+
+# --- Publisher detail ---
+@login_required
+def publisher_detail(request, pk):
+    """Display a single publisher with its journalists and editors."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    return render(request, 'newsApp/publisher_detail.html', {'publisher': publisher})
+
+
+# --- Journalist joins a publisher ---
+@login_required
+@user_passes_test(is_journalist)
+def join_publisher(request, pk):
+    """Allow a journalist to register with a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    if request.method == 'POST':
+        publisher.journalists.add(request.user)
+        messages.success(request, f'You have joined {publisher.name}.')
+        return redirect('journalist_dashboard')
+    return render(request, 'newsApp/publisher_join_confirm.html', {'publisher': publisher})
+
+
+# --- Journalist leaves a publisher ---
+@login_required
+@user_passes_test(is_journalist)
+def leave_publisher(request, pk):
+    """Allow a journalist to leave a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    if request.method == 'POST':
+        publisher.journalists.remove(request.user)
+        messages.success(request, f'You have left {publisher.name}.')
+        return redirect('journalist_dashboard')
+    return render(request, 'newsApp/delete_confirm.html', {'item': publisher})
+
+
+# --- Editor creates a publisher ---
+@login_required
+@user_passes_test(is_editor)
+def create_publisher(request):
+    """Allow an editor to create a new publisher."""
+    from .forms import PublisherForm
+    form = PublisherForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        publisher = form.save(commit=False)
+        publisher.save()
+        publisher.editors.add(request.user)
+        messages.success(request, f'Publisher {publisher.name} created.')
+        return redirect('publisher_list')
+    return render(request, 'newsApp/create_publisher.html', {'form': form})
+
+
+# --- Editor adds journalist to publisher ---
+@login_required
+@user_passes_test(is_editor)
+def add_journalist_to_publisher(request, pk):
+    """Allow an editor to add a journalist to a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    journalists = User.objects.filter(role='journalist')
+    if request.method == 'POST':
+        journalist_id = request.POST.get('journalist_id')
+        journalist = get_object_or_404(User, id=journalist_id, role='journalist')
+        publisher.journalists.add(journalist)
+        messages.success(request, f'{journalist.username} added to {publisher.name}.')
+        return redirect('publisher_detail', pk=publisher.pk)
+    return render(request, 'newsApp/publisher_add_journalist.html', {
+        'publisher': publisher,
+        'journalists': journalists
+    })
+
+
+# --- Editor removes journalist from publisher ---
+@login_required
+@user_passes_test(is_editor)
+def remove_journalist_from_publisher(request, pk, journalist_id):
+    """Allow an editor to remove a journalist from a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    journalist = get_object_or_404(User, id=journalist_id, role='journalist')
+    if request.method == 'POST':
+        publisher.journalists.remove(journalist)
+        messages.success(request, f'{journalist.username} removed from {publisher.name}.')
+        return redirect('publisher_detail', pk=publisher.pk)
+    return render(request, 'newsApp/delete_confirm.html', {'item': journalist})
+
+
+# --- Reader: Subscribe/Unsubscribe to Publisher ---
+@login_required
+def subscribe_publisher(request, pk):
+    """Allow a reader to subscribe to a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    if request.method == 'POST':
+        request.user.subscribed_publishers.add(publisher)
+        messages.success(request, f'You are now subscribed to {publisher.name}.')
+        return redirect('publisher_list')
+    return render(request, 'newsApp/subscribe_confirm.html', {
+        'item': publisher,
+        'action': 'subscribe to',
+        'cancel_url': 'publisher_list',
+    })
+
+
+@login_required
+def unsubscribe_publisher(request, pk):
+    """Allow a reader to unsubscribe from a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    if request.method == 'POST':
+        request.user.subscribed_publishers.remove(publisher)
+        messages.success(request, f'You have unsubscribed from {publisher.name}.')
+        return redirect('publisher_list')
+    return render(request, 'newsApp/subscribe_confirm.html', {
+        'item': publisher,
+        'action': 'unsubscribe from',
+        'cancel_url': 'publisher_list',
+    })
+
+
+# --- Reader: View journalist list ---
+@login_required
+def journalist_list(request):
+    """Display all journalists for readers to browse and subscribe to."""
+    journalists = User.objects.filter(role='journalist').order_by('username')
+    return render(request, 'newsApp/journalist_list.html', {'journalists': journalists})
+
+
+# --- Reader: Subscribe/Unsubscribe to Journalist ---
+@login_required
+def subscribe_journalist(request, pk):
+    """Allow a reader to subscribe to a journalist."""
+    journalist = get_object_or_404(User, pk=pk, role='journalist')
+    if request.method == 'POST':
+        request.user.subscribed_journalists.add(journalist)
+        messages.success(request, f'You are now subscribed to {journalist.username}.')
+        return redirect('journalist_list')
+    return render(request, 'newsApp/subscribe_confirm.html', {
+        'item': journalist,
+        'action': 'subscribe to',
+        'cancel_url': 'journalist_list',
+    })
+
+
+@login_required
+def unsubscribe_journalist(request, pk):
+    """Allow a reader to unsubscribe from a journalist."""
+    journalist = get_object_or_404(User, pk=pk, role='journalist')
+    if request.method == 'POST':
+        request.user.subscribed_journalists.remove(journalist)
+        messages.success(request, f'You have unsubscribed from {journalist.username}.')
+        return redirect('journalist_list')
+    return render(request, 'newsApp/subscribe_confirm.html', {
+        'item': journalist,
+        'action': 'unsubscribe from',
+        'cancel_url': 'journalist_list',
+    })

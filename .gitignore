@@ -1,4 +1,3 @@
-cat > .gitignore << 'EOF'
 # Python
 __pycache__/
 *.py[cod]
@@ -31,25 +30,16 @@ media/
 
 # macOS
 .DS_Store
-.AppleDouble
-.LSOverride
 
 # IDE
 .vscode/
 .idea/
-*.swp
-*.swo
 
 # Testing
 .coverage
 htmlcov/
 .pytest_cache/
 
-# Static files collected
+# Static files
 staticfiles/
 static_root/
-
-# Migrations (optional — remove this if you want to track migrations)
-# newsApp/migrations/
-
-EOF

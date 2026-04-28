@@ -1,0 +1,44 @@
+{% extends "newsApp/base.html" %}
+
+{% block title %}Journalists - The Speedy Spectator{% endblock %}
+
+{% block content %}
+<div class="news-list-container">
+    <h1 class="queue-heading">Journalists</h1>
+
+    {% for journalist in journalists %}
+        <div class="news-card">
+            <h2>{{ journalist.username }}</h2>
+            <p>{{ journalist.email }}</p>
+            <p><strong>Articles:</strong> {{ journalist.articles.count }}</p>
+
+            <div class="card-actions">
+
+                {% if user.role == 'reader' %}
+                    {% if journalist in user.subscribed_journalists.all %}
+                        <form method="POST" action="{% url 'unsubscribe_journalist' journalist.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger"
+                                    onclick="return confirm('Unsubscribe from {{ journalist.username }}?')">
+                                Unsubscribe
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="POST" action="{% url 'subscribe_journalist' journalist.pk %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success">Subscribe</button>
+                        </form>
+                    {% endif %}
+                {% endif %}
+
+            </div>
+        </div>
+
+    {% empty %}
+        <div class="news-card empty-queue">
+            <p>No journalists registered yet.</p>
+        </div>
+    {% endfor %}
+
+</div>
+{% endblock %}

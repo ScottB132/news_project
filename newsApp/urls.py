@@ -169,4 +169,21 @@ urlpatterns = [
     # GET: current authenticated user's profile and role
     path('api/users/me/', api_views.CurrentUserView.as_view(), name='api_current_user'),
 
+    # Publishers
+    path('publishers/', views.publisher_list, name='publisher_list'),
+    path('publishers/create/', views.create_publisher, name='create_publisher'),
+    path('publishers/<int:pk>/', views.publisher_detail, name='publisher_detail'),
+    path('publishers/<int:pk>/join/', views.join_publisher, name='join_publisher'),
+    path('publishers/<int:pk>/leave/', views.leave_publisher, name='leave_publisher'),
+    path('publishers/<int:pk>/add-journalist/', views.add_journalist_to_publisher, name='add_journalist_to_publisher'),
+    path('publishers/<int:pk>/remove-journalist/<int:journalist_id>/', views.remove_journalist_from_publisher, name='remove_journalist_from_publisher'),
+
+
+    # Reader subscriptions
+    path('journalists/', views.journalist_list, name='journalist_list'),
+    path('publishers/<int:pk>/subscribe/', views.subscribe_publisher, name='subscribe_publisher'),
+    path('publishers/<int:pk>/unsubscribe/', views.unsubscribe_publisher, name='unsubscribe_publisher'),
+    path('journalists/<int:pk>/subscribe/', views.subscribe_journalist, name='subscribe_journalist'),
+    path('journalists/<int:pk>/unsubscribe/', views.unsubscribe_journalist, name='unsubscribe_journalist'),
+
 ]
