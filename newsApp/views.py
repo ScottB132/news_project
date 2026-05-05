@@ -908,3 +908,39 @@ class NewsletterDetailView(DetailView):
     model = Newsletter
     template_name = 'newsApp/newsletter_detail.html'
     context_object_name = 'newsletter'
+
+
+class ArticleListView(ListView):
+    """
+    Generic list view for displaying all approved articles.
+    Replaces the news_list function view.
+    """
+    model = Article
+    template_name = 'newsApp/news_list.html'
+    context_object_name = 'articles'
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        queryset = Article.objects.filter(approved=True).order_by('-created_at')
+        query = self.request.GET.get('q', '')
+        if query:
+            queryset = queryset.filter(title__icontains=query)
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['query'] = self.request.GET.get('q', '')
+        return context
+
+
+class ArticleDetailView(DetailView):
+    """
+    Generic detail view for displaying a single approved article.
+    Replaces the article_detail function view.
+    """
+    model = Article
+    template_name = 'newsApp/article_detail.html'
+    context_object_name = 'article'
+
+    def get_queryset(self):
+        return Article.objects.filter(approved=True)

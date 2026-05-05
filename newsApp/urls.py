@@ -32,10 +32,10 @@ urlpatterns = [
     # ---------------------------------------------------------------------------
 
     # Full news list (editors see all, others see approved only)
-    path('news/', views.news_list, name='news_list'),
+    path('news/', views.ArticleListView.as_view(), name='news_list'),
 
     # Full article detail — approved articles only
-    path('article/<int:pk>/', views.article_detail, name='article_detail'),
+    path('article/<int:pk>/', views.ArticleDetailView.as_view(), name='article_detail'),
 
     # Article preview — any authenticated user, no approval filter
     path('article/<int:pk>/preview/', views.preview_article, name='preview_article'),
