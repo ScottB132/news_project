@@ -26,6 +26,18 @@ pip install -r requirements.txt
 ### 4. Set up environment variables
 Create a `.env` file in the project root with the following:
 
+nano .env
+
+
+SECRET_KEY=your_secret_key_here
+DEBUG=True
+ALLOWED_HOSTS=localhost,127.0.0.1
+DB_NAME=your_database_name
+DB_USER=your_database_user
+DB_PASSWORD=your_database_password
+DB_HOST=localhost
+DB_PORT=3306
+
 The Speedy Spectator — News Application
 
 A Django-based news portal supporting multiple user roles, article management,
