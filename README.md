@@ -28,7 +28,6 @@ Create a `.env` file in the project root with the following:
 
 nano .env
 
-
 SECRET_KEY=your_secret_key_here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
