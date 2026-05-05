@@ -98,6 +98,9 @@ urlpatterns = [
     # Editor: delete any newsletter
     path('newsletters/<int:pk>/editor-delete/', views.editor_delete_newsletter, name='editor_delete_newsletter'),
 
+    path('newsletters/all/', views.NewsletterListView.as_view(), name='newsletter_list'),
+    path('newsletters/<int:pk>/', views.NewsletterDetailView.as_view(), name='newsletter_detail'),
+
     # ---------------------------------------------------------------------------
     # Authentication
     # ---------------------------------------------------------------------------

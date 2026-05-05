@@ -23,7 +23,7 @@ from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.views.decorators.csrf import csrf_exempt
-
+from django.views.generic import ListView, DetailView
 from .forms import ArticleForm, JournalistRegistrationForm, NewsletterForm
 from .models import Article, Newsletter, User, Publisher
 
@@ -884,3 +884,27 @@ def unsubscribe_journalist(request, pk):
         'action': 'unsubscribe from',
         'cancel_url': 'journalist_list',
     })# Docstrings verified
+
+# ---------------------------------------------------------------------------
+# Generic Views
+# ---------------------------------------------------------------------------
+
+class NewsletterListView(ListView):
+    """
+    Generic list view for displaying all newsletters.
+    Replaces the newsletter_list function view.
+    """
+    model = Newsletter
+    template_name = 'newsApp/newsletter_list.html'
+    context_object_name = 'newsletters'
+    ordering = ['-created_at']
+
+
+class NewsletterDetailView(DetailView):
+    """
+    Generic detail view for displaying a single newsletter.
+    Replaces the newsletter_detail function view.
+    """
+    model = Newsletter
+    template_name = 'newsApp/newsletter_detail.html'
+    context_object_name = 'newsletter'
