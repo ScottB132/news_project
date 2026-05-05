@@ -42,6 +42,31 @@
         {% endfor %}
     </div>
 
+
+    {% if user.role == 'editor' and publisher.pending_journalists.all %}
+        <div class="news-card">
+            <h2>Pending Approval</h2>
+            {% for journalist in publisher.pending_journalists.all %}
+                <div class="story-meta" style="padding: 8px 0; border-bottom: 1px solid #eee;">
+                    <strong>{{ journalist.username }}</strong> — {{ journalist.email }}
+                    <form method="POST"
+                        action="{% url 'approve_journalist_join' publisher.pk journalist.id %}"
+                        style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success">Approve</button>
+                    </form>
+                    <form method="POST"
+                        action="{% url 'reject_journalist_join' publisher.pk journalist.id %}"
+                        style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Reject</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+
     <div class="news-card">
         <h2>Editors</h2>
         {% for editor in publisher.editors.all %}

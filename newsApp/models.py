@@ -191,6 +191,13 @@ class Publisher(models.Model):
         related_name='publisher_journalists'
     )
 
+    # Journalists waiting for editor approval to join
+    pending_journalists = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name='pending_publishers'
+    )
+
     # Editors who work for or are associated with this publisher
     editors = models.ManyToManyField(
         User,

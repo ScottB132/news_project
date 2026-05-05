@@ -718,13 +718,40 @@ def publisher_detail(request, pk):
 @login_required
 @user_passes_test(is_journalist)
 def join_publisher(request, pk):
-    """Allow a journalist to register with a publisher."""
+    """Allow a journalist to request to join a publisher — requires editor approval."""
     publisher = get_object_or_404(Publisher, pk=pk)
     if request.method == 'POST':
-        publisher.journalists.add(request.user)
-        messages.success(request, f'You have joined {publisher.name}.')
+        publisher.pending_journalists.add(request.user)
+        messages.success(request, f'Your request to join {publisher.name} has been sent for approval.')
         return redirect('journalist_dashboard')
     return render(request, 'newsApp/publisher_join_confirm.html', {'publisher': publisher})
+
+
+@login_required
+@user_passes_test(is_editor)
+def approve_journalist_join(request, pk, journalist_id):
+    """Allow an editor to approve a journalist's request to join a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    journalist = get_object_or_404(User, id=journalist_id, role='journalist')
+    if request.method == 'POST':
+        publisher.pending_journalists.remove(journalist)
+        publisher.journalists.add(journalist)
+        messages.success(request, f'{journalist.username} approved to join {publisher.name}.')
+        return redirect('publisher_detail', pk=publisher.pk)
+    return render(request, 'newsApp/approve_confirm.html', {'article': journalist})
+
+
+@login_required
+@user_passes_test(is_editor)
+def reject_journalist_join(request, pk, journalist_id):
+    """Allow an editor to reject a journalist's request to join a publisher."""
+    publisher = get_object_or_404(Publisher, pk=pk)
+    journalist = get_object_or_404(User, id=journalist_id, role='journalist')
+    if request.method == 'POST':
+        publisher.pending_journalists.remove(journalist)
+        messages.success(request, f'{journalist.username} rejected from joining {publisher.name}.')
+        return redirect('publisher_detail', pk=publisher.pk)
+    return render(request, 'newsApp/delete_confirm.html', {'item': journalist})
 
 
 # --- Journalist leaves a publisher ---

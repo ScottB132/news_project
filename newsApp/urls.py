@@ -177,6 +177,8 @@ urlpatterns = [
     path('publishers/<int:pk>/leave/', views.leave_publisher, name='leave_publisher'),
     path('publishers/<int:pk>/add-journalist/', views.add_journalist_to_publisher, name='add_journalist_to_publisher'),
     path('publishers/<int:pk>/remove-journalist/<int:journalist_id>/', views.remove_journalist_from_publisher, name='remove_journalist_from_publisher'),
+    path('publishers/<int:pk>/approve-journalist/<int:journalist_id>/', views.approve_journalist_join, name='approve_journalist_join'),
+    path('publishers/<int:pk>/reject-journalist/<int:journalist_id>/', views.reject_journalist_join, name='reject_journalist_join'),
 
 
     # Reader subscriptions
