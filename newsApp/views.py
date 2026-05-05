@@ -246,19 +246,23 @@ def home(request):
 
 def news_list(request):
     """
-    Render the full news list page.
-
-    Editors see all articles (approved and pending).
-    All other users see only approved articles.
+    Render the full news list page with optional search.
+    Editors see all articles. Others see only approved articles.
     """
+    query = request.GET.get('q', '')
+
     if request.user.is_authenticated and request.user.role == 'editor':
-        # Editors can see all articles including unapproved ones
         articles = Article.objects.all().order_by('-created_at')
     else:
-        # Readers and journalists only see approved articles
         articles = Article.objects.filter(approved=True).order_by('-created_at')
 
-    return render(request, 'newsApp/news_list.html', {'articles': articles})
+    if query:
+        articles = articles.filter(title__icontains=query)
+
+    return render(request, 'newsApp/news_list.html', {
+        'articles': articles,
+        'query': query,
+    })
 
 
 def article_detail(request, pk):

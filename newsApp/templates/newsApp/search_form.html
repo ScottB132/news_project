@@ -1,0 +1,18 @@
+<p>SEARCH FORM LOADED</p>
+<form method="GET" action="" class="search-form" style="margin-bottom: 20px;">
+...
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+        <input
+            type="text"
+            name="q"
+            value="{{ request.GET.q }}"
+            placeholder="Search..."
+            class="search-input"
+            style="padding: 8px 12px; border: 1px solid #ccc; border-radius: 6px; flex: 1; min-width: 200px;"
+        >
+        <button type="submit" class="btn btn-primary">Search</button>
+        {% if request.GET.q %}
+            <a href="{{ request.path }}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </div>
+</form>

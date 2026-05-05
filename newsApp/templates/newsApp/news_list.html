@@ -5,6 +5,8 @@
 {% block content %}
 <div class="news-list-container">
     <h1 class="queue-heading">Latest Headlines</h1>
+    <p>TEMPLATE LOADED</p>
+    {% include "newsApp/search_form.html" %}
 
     {% for article in articles %}
         <div class="news-card">

@@ -1,40 +1,104 @@
 {% extends "newsApp/base.html" %}
-
 {% block title %}{{ newsletter.title }} - The Speedy Spectator{% endblock %}
-
 {% block content %}
 <div class="news-card article-detail">
-
     <h1 class="article-title">{{ newsletter.title }}</h1>
-
     <div class="story-meta">
         By <strong>{{ newsletter.author.username }}</strong>
         &nbsp;|&nbsp;
         {{ newsletter.created_at|date:"F d, Y" }}
     </div>
-
     <hr>
-
     <div class="article-body">
         {{ newsletter.description|linebreaks }}
     </div>
 
     {% if newsletter.articles.all %}
         <h3>Articles in this Newsletter</h3>
+        <div style="margin-bottom: 15px;">
+            <button type="button" class="btn btn-secondary" onclick="selectAll()">Select All</button>
+            <button type="button" class="btn btn-secondary" onclick="clearAll()">Clear All</button>
+        </div>
+
         {% for article in newsletter.articles.all %}
-            <div class="story-item">
-                <h4>{{ article.title }}</h4>
-                <p>{{ article.content|truncatewords:30 }}</p>
-                <div class="card-actions">
-                    <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Read Article</a>
+            <div class="story-item" id="article-card-{{ article.id }}"
+                 style="border: 2px solid transparent; border-radius: 8px; padding: 10px; margin-bottom: 10px;">
+                <div style="display: flex; align-items: flex-start; gap: 12px;">
+                    <input
+                        type="checkbox"
+                        id="check-{{ article.id }}"
+                        style="margin-top: 5px; width: 18px; height: 18px; cursor: pointer;"
+                        onchange="toggleHighlight({{ article.id }})"
+                    >
+                    <label for="check-{{ article.id }}" style="flex: 1; cursor: pointer;">
+                        <h4 style="margin: 0 0 5px 0;">{{ article.title }}</h4>
+                        <p style="margin: 0 0 8px 0;">{{ article.content|truncatewords:30 }}</p>
+                        <div class="story-meta">
+                            By <strong>{{ article.author.username }}</strong>
+                            &nbsp;|&nbsp;
+                            {{ article.created_at|date:"M d, Y" }}
+                        </div>
+                    </label>
+                    <a href="{% url 'article_detail' article.id %}" class="btn btn-primary">Read</a>
                 </div>
             </div>
         {% endfor %}
+
+        <div id="selected-articles" style="display:none; margin-top: 30px;">
+            <h3>Your Reading List</h3>
+            <div id="reading-list"></div>
+        </div>
     {% endif %}
 
     <div class="article-footer">
         <a href="{% url 'newsletter_list' %}" class="btn btn-primary">Back to Newsletters</a>
     </div>
-
 </div>
+
+<script>
+    function toggleHighlight(id) {
+        const checkbox = document.getElementById('check-' + id);
+        const card = document.getElementById('article-card-' + id);
+        if (checkbox.checked) {
+            card.style.borderColor = '#2563eb';
+            card.style.backgroundColor = '#eff6ff';
+        } else {
+            card.style.borderColor = 'transparent';
+            card.style.backgroundColor = '';
+        }
+        updateReadingList();
+    }
+
+    function selectAll() {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = true;
+            toggleHighlight(cb.id.replace('check-', ''));
+        });
+    }
+
+    function clearAll() {
+        document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.checked = false;
+            toggleHighlight(cb.id.replace('check-', ''));
+        });
+    }
+
+    function updateReadingList() {
+        const checked = document.querySelectorAll('input[type="checkbox"]:checked');
+        const container = document.getElementById('selected-articles');
+        const list = document.getElementById('reading-list');
+
+        if (checked.length > 0) {
+            container.style.display = 'block';
+            list.innerHTML = '';
+            checked.forEach(cb => {
+                const card = document.getElementById('article-card-' + cb.id.replace('check-', ''));
+                const title = card.querySelector('h4').innerText;
+                list.innerHTML += `<p>✅ <strong>${title}</strong></p>`;
+            });
+        } else {
+            container.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}
